@@ -1,0 +1,50 @@
+.venv*
+.env
+
+# Python bytecode files
+__pycache__/
+*.py[cod]
+
+# Virtual environment
+venv/
+env/
+.venv/
+ENV/
+*.env
+
+# FastAPI
+*.db
+*.sqlite3
+
+# IDEs
+.vscode/
+.idea/
+
+# Pytest
+.cache/
+
+# Coverage reports
+.coverage
+coverage.xml
+*.cover
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pylint
+pylint-report.txt
+pylint-global.txt
+
+# Flask (if mixed with FastAPI or similar frameworks)
+instance/
+*.log
+
+# JetBrains IDEs (if using PyCharm or similar)
+*.iml
+*.idea/
+
+# Miscellaneous
+*.bak
+*.swp

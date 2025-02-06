@@ -42,7 +42,7 @@ class DataCRUDClient:
     async def create_kfi(self, applicant_id: str, kfi_data: Dict) -> Optional[Dict]:
         async with aiohttp.ClientSession() as session:
             async with session.post(
-                f"{self.base_url}/applicants/{applicant_id}/kfi/", json=kfi_data
+                f"{self.base_url}/applicants/{applicant_id}/kfis/", json=kfi_data
             ) as response:
                 if response.status == 201:
                     return await response.json()

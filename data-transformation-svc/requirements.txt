@@ -6,3 +6,5 @@ aiohttp
 pdfplumber
 openai
 python-dotenv
+pandas
+numpy

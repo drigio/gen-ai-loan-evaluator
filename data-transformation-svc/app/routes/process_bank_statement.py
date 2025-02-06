@@ -1,5 +1,6 @@
+# ./data-transformation-svc/app/routes/process_bank_statement.py
 from fastapi import APIRouter, HTTPException, UploadFile, File
-from typing import Any
+from typing import Any, Dict, List
 
 from pydantic import ValidationError
 from app.models.applicant import Applicant
@@ -10,7 +11,9 @@ from app.services.data_crud_client import DataCRUDClient
 import uuid
 import inspect
 from datetime import datetime
-
+import numpy as np  # Import numpy
+from app.models.key_financial_indicator import KeyFinancialIndicator
+from app.services.kfi_calculator import calculate_kfi  # Import the service
 
 router = APIRouter()
 data_crud_client = DataCRUDClient()
@@ -28,6 +31,7 @@ async def process_bank_statement(file: UploadFile = File(...)) -> Any:
         applicant_id = await create_applicant()
         await update_applicant_with_raw_text(applicant_id, raw_text)
         transactions = await process_and_store_transactions(applicant_id, raw_text)
+        await process_and_store_kfi(applicant_id, transactions)  # Add KFI processing
 
         return {
             "message": "Bank statement processed and transactions extracted successfully",
@@ -67,7 +71,9 @@ async def update_applicant_with_raw_text(applicant_id: str, raw_text: str) -> No
         )
 
 
-async def process_and_store_transactions(applicant_id: str, raw_text: str) -> None:
+async def process_and_store_transactions(
+    applicant_id: str, raw_text: str
+) -> List[Dict[str, any]]:  # Return the transaction list
     print("Reached " + inspect.currentframe().f_code.co_name)
     transactions_csv_list = await process_text_with_llm(raw_text)
 
@@ -76,21 +82,10 @@ async def process_and_store_transactions(applicant_id: str, raw_text: str) -> No
             transaction_dict["date"], "%Y-%m-%d"
         )
 
-    # transactions_list = [
-    #     transaction.json(
-    #         exclude_none=True
-    #     )  # Use the `json()` method to serialize with datetime handling
-    #     for transaction in [
-    #         Transaction(**transaction_dict)
-    #         for transaction_dict in transactions_csv_list
-    #     ]
-    # ]
     transactions_list = [
-        transaction.model_dump(
-            exclude_none=True
-        )  # Use model_dump instead of dict to serialize
+        transaction.model_dump(exclude_none=True)
         for transaction in [
-            Transaction(**transaction_dict)  # Create a Transaction object from the dict
+            Transaction(**transaction_dict)
             for transaction_dict in transactions_csv_list
         ]
     ]
@@ -98,29 +93,55 @@ async def process_and_store_transactions(applicant_id: str, raw_text: str) -> No
         {key: convert_datetime_to_string(value) for key, value in transaction.items()}
         for transaction in transactions_list
     ]
-    # print("Processed transactions")
-    # print(transactions_list)
 
     try:
         response = await data_crud_client.create_transactions(
             applicant_id, transactions_list
         )
+        if not response:
+            raise HTTPException(status_code=500, detail="Failed to store transactions")
+        return transactions_list  # Return processed transactions
+
     except HTTPException as e:
-        # Catch the HTTPException (422 or other HTTP status codes)
         if e.status_code == 422:
-            # Log the validation error details in the console
             print(f"Validation error occurred: {e.detail}")
             print(f"Error response: {e.response.json()}")
         else:
             print(f"HTTP error occurred: {e}")
+        raise  # Re-raise the exception to be caught in the main handler
 
     except ValidationError as e:
         print(f"Pydantic validation error: {e.json()}")
+        raise HTTPException(
+            status_code=500, detail="Failed to validate transaction data"
+        )  # Convert ValidationError to HTTPException
 
-    if not response:
-        raise HTTPException(status_code=500, detail="Failed to store transactions")
 
 def convert_datetime_to_string(obj):
     if isinstance(obj, datetime):
         return obj.isoformat()  # Convert datetime to ISO format string
     return obj
+
+
+async def process_and_store_kfi(applicant_id: str, transactions: List[Dict[str, any]]):
+    print("Reached " + inspect.currentframe().f_code.co_name)
+    kfi_data = calculate_kfi(transactions)  # Use the imported function
+    kfi_model = KeyFinancialIndicator(**kfi_data)
+
+    try:
+        response = await data_crud_client.create_kfi(
+            applicant_id, kfi_model.model_dump(exclude_none=True)
+        )
+    except HTTPException as e:
+        if e.status_code == 422:
+            print(f"Validation error occurred: {e.detail}")
+        else:
+            print(f"HTTP error occurred: {e}")
+        raise
+    except ValidationError as e:
+        print(
+            f"Pydantic validation error: {e}"
+        )  # Correct way to print validation errors.
+        raise
+    if not response:
+        raise HTTPException(status_code=500, detail="Failed to store KFI data")

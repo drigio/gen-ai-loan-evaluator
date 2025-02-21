@@ -1,9 +1,9 @@
 from fastapi import FastAPI
+from app.routes import process_bank_statement
+from app.services.data_crud_client import DataCRUDClient
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import applicant, transaction, key_financial_indicator
-from app.db import init_db
 
-app = FastAPI()
+app = FastAPI(title="Data Ingestion Service", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -14,14 +14,12 @@ app.add_middleware(
 )
 
 async def startup_event():
-    init_db()
+    app.state.data_crud_client = DataCRUDClient()
 
 app.add_event_handler("startup", startup_event)
 
-app.include_router(applicant.router)
-app.include_router(transaction.router)
-app.include_router(key_financial_indicator.router)
+app.include_router(process_bank_statement.router, prefix="/api/v1")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8002)

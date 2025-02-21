@@ -35,9 +35,9 @@ async def create_bulk_transactions(applicant_id: str, transactions: List[Transac
     # print("Raw Request Body:", raw_body)
 
     # print(transactions)
-    # transaction_dicts = [
-    #     transaction.model_dump(exclude_unset=True) for transaction in transactions
-    # ]
+    transaction_dicts = [
+        transaction.model_dump(exclude_unset=True) for transaction in transactions
+    ]
 
     # print("transactions_dicts STARTS HERE =============================\n\n")
 

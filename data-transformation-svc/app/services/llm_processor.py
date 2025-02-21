@@ -39,14 +39,18 @@ async def process_text_with_llm(statement_text: str) -> List[Dict[str, str]]:
 def _parse_csv_to_transactions(csv_content: str) -> List[Dict[str, str]]:
     print("Reached " + inspect.currentframe().f_code.co_name)
     transactions = []
-    # print(csv_content)
-    # print("CSV CONTENT ENDS HERE ===============================")
+    print(csv_content)
+    print("CSV CONTENT ENDS HERE ===============================")
     try:
         csv_reader = csv.DictReader(line.strip() for line in csv_content.splitlines())
         for row in csv_reader:
+            print(row)
+            print(row['balance'])
+            if not row['balance']:
+                row['balance'] = 0.0
             transactions.append(row)
     except Exception as e:
         print(f"Error parsing CSV content: {e}")
         return []
-    # print(transactions)
+    print(transactions)
     return transactions

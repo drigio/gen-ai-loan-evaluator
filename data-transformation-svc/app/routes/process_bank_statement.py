@@ -39,9 +39,12 @@ async def process_bank_statement(file: UploadFile = File(...)) -> Any:
         }
 
     except HTTPException as http_exc:
+        print(http_exc)
         raise http_exc
     except Exception as e:
+        print(e)
         raise HTTPException(status_code=500, detail=str(e))
+        
 
 
 async def create_applicant() -> str:
@@ -126,6 +129,7 @@ def convert_datetime_to_string(obj):
 async def process_and_store_kfi(applicant_id: str, transactions: List[Dict[str, any]]):
     print("Reached " + inspect.currentframe().f_code.co_name)
     kfi_data = calculate_kfi(transactions)  # Use the imported function
+    print(kfi_data)
     kfi_model = KeyFinancialIndicator(**kfi_data)
 
     try:
